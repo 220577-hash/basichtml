@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BasicHTML 完全版について</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    code {
+      background-color: #f4f4f4;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📝 BasicHTML 完全版について（About）</h1>
+
+  <h2>1. 目的</h2>
+  <p>プログラミング初心者でも書きやすい「Basic風構文」で HTML を生成する</p>
+  <ul>
+    <li>テキスト・見出し・画像・リンク・スタイル・条件分岐・ループ・変数を簡単に扱える</li>
+  </ul>
+
+  <h2>2. 主な特徴</h2>
+  <table>
+    <tr>
+      <th>機能</th>
+      <th>構文例</th>
+      <th>HTML出力</th>
+    </tr>
+    <tr>
+      <td>テキスト出力</td>
+      <td><code>PRINT "こんにちは"</code></td>
+      <td><p>こんにちは</p></td>
+    </tr>
+    <tr>
+      <td>見出し</td>
+      <td><code>H1 { "タイトル" }</code></td>
+      <td><h1>タイトル</h1></td>
+    </tr>
+    <tr>
+      <td>DIV</td>
+      <td><code>DIV { ... }</code></td>
+      <td><div>...</div></td>
+    </tr>
+    <tr>
+      <td>画像</td>
+      <td><code>IMG "URL", "ALT"</code></td>
+      <td><img src="URL" alt="ALT"></td>
+    </tr>
+    <tr>
+      <td>リンク</td>
+      <td><code>A "URL", "テキスト"</code></td>
+      <td><a href="URL">テキスト</a></td>
+    </tr>
+    <tr>
+      <td>スタイル</td>
+      <td><code>STYLE { H1 { "color:red;" } }</code></td>
+      <td><style>h1 { color:red; }</style></td>
+    </tr>
+    <tr>
+      <td>変数</td>
+      <td><code>LET x = 5</code></td>
+      <td>JavaScript で評価可能</td>
+    </tr>
+    <tr>
+      <td>式・計算</td>
+      <td><code>PRINT x*2 + 1</code></td>
+      <td><p>11</p>（x=5の場合）</td>
+    </tr>
+    <tr>
+      <td>FORループ</td>
+      <td><code>FOR i=1 TO 3 { PRINT i }</code></td>
+      <td><p>1</p><p>2</p><p>3</p></td>
+    </tr>
+    <tr>
+      <td>IF/ELSE</td>
+      <td><code>IF x>3 { PRINT "大" } ELSE { PRINT "小" }</code></td>
+      <td>条件に応じて出力</td>
+    </tr>
+  </table>
+
+  <h2>3. 基本思想</h2>
+  <ul>
+    <li>Basic風構文
+      <ul>
+        <li>キーワードや大文字タグを使用</li>
+        <li><code>{}</code>でネスト構造を表現</li>
+        <li><code>PRINT</code>で段落出力</li>
+      </ul>
+    </li>
+    <li>動的処理
+      <ul>
+        <li>変数、計算式、ループ、条件分岐が可能</li>
+        <li>HTMLを直接書かずに、Basic風で動的HTML生成が可能</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>4. 仕組み</h2>
+  <ul>
+    <li>ブラウザ上の JavaScript でパース（解析）→ HTML生成</li>
+    <li><code>processBlock()</code> 関数でネスト構造を再帰的に処理</li>
+    <li><code>evalExpr()</code> で変数や式を評価</li>
+  </ul>
+
+  <h2>5. 拡張可能性</h2>
+  <ul>
+    <li>イベントハンドラ（クリック、入力など）を追加</li>
+    <li>独自関数やモジュールを組み込み</li>
+    <li>JSONやAPIデータを取り込んで動的生成</li>
+  </ul>
+
+  <h2>💡 まとめ</h2>
+  <p>この BasicHTML は、</p>
+  <ul>
+    <li>HTML/CSS/JS を知らなくても</li>
+    <li>Basic風の直感的な構文で</li>
+    <li>変数・条件・ループを含む動的なWebページを作れる</li>
+  </ul>
+  <p>まさに「大人用 Basic → HTML」コンパイラ兼簡易フレームワークです。</p>
+
+</body>
+</html>
