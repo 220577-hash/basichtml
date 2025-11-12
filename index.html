@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>大人用 BasicHTML 完全版</title>
+<title>BasicHTML</title>
 </head>
 <body>
 <h2>BasicHTML Editor</h2>
@@ -12,20 +12,20 @@ STYLE {
   P { "color:blue;" }
 }
 
+LET x = 5
 H1 { "見出し" }
 DIV {
-  PRINT "段落1"
-  IMG "https://example.com/image.jpg", "説明文"
-  H2 { "小見出し" }
-  A "https://example.com", "リンクテキスト"
+  PRINT "x=" + x
   FOR i=1 TO 3 {
-    PRINT "繰り返し " + i
+    PRINT "回数: " + i
   }
-  IF 1<2 {
-    PRINT "条件成立"
+  IF x>3 {
+    PRINT "xは3より大きい"
   } ELSE {
-    PRINT "条件不成立"
+    PRINT "xは3以下"
   }
+  IMG "https://example.com/image.jpg", "説明文"
+  A "https://example.com", "リンクテキスト"
 }
 </textarea>
 <button onclick="run()">Run</button>
@@ -35,107 +35,137 @@ DIV {
 function run() {
     const code = document.getElementById("code").value;
     const lines = code.split("\n");
-    const stack = [];
-    let html = "";
+    const vars = {};
     let styleHTML = "";
 
-    function evalExpression(expr) {
+    function evalExpr(expr) {
         try {
-            return Function('"use strict"; return (' + expr + ')')();
+            const keys = Object.keys(vars);
+            const vals = Object.values(vars);
+            return Function(...keys, `"use strict"; return (${expr})`)(...vals);
         } catch {
             return expr;
         }
     }
 
-    for (let rawLine of lines) {
-        let line = rawLine.trim();
-        if (!line) continue;
+    function processBlock(lines, startIdx) {
+        let i = startIdx;
+        let html = "";
+        while (i<lines.length) {
+            let line = lines[i].trim();
+            if (!line) { i++; continue; }
 
-        // STYLEブロック
-        if (line.startsWith("STYLE {")) {
-            stack.push("STYLE");
-            continue;
-        } else if (line === "}" && stack[stack.length-1]==="STYLE") {
-            stack.pop();
-            continue;
-        }
-        if (stack.includes("STYLE")) {
-            const match = line.match(/^([A-Z0-9]+)\s*{\s*"(.*)"\s*}$/);
-            if (match) {
-                const tag = match[1].toLowerCase();
-                const css = match[2];
-                styleHTML += `${tag} { ${css} }\n`;
+            if (line==="}") return [html, i];
+
+            // LET
+            if (line.startsWith("LET ")) {
+                const match = line.match(/^LET\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.*)$/);
+                if (match) vars[match[1]] = evalExpr(match[2]);
+                i++; continue;
             }
-            continue;
-        }
 
-        // FORブロック
-        if (line.startsWith("FOR ")) {
-            const match = line.match(/^FOR\s+([a-zA-Z]+)=([0-9]+)\s+TO\s+([0-9]+)\s*{$/);
-            if (match) {
-                const varName = match[1];
-                const start = parseInt(match[2]);
-                const end = parseInt(match[3]);
-                const blockLines = [];
-                stack.push("FOR");
+            // PRINT
+            if (line.startsWith("PRINT ")) {
+                let text = line.slice(6);
+                if (text.includes("+")) {
+                    const parts = text.split("+").map(s=>s.trim().replace(/^"|"$/g,""));
+                    text = parts.map(p=>evalExpr(p)).join("");
+                } else {
+                    text = evalExpr(text.replace(/^"|"$/g,""));
+                }
+                html += `<p>${text}</p>`;
+                i++; continue;
+            }
+
+            // IMG
+            if (line.startsWith("IMG ")) {
+                const match = line.match(/^IMG\s*"([^"]+)",\s*"([^"]+)"$/);
+                if (match) html += `<img src="${match[1]}" alt="${match[2]}">`;
+                i++; continue;
+            }
+
+            // A
+            if (line.startsWith("A ")) {
+                const match = line.match(/^A\s*"([^"]+)",\s*"([^"]+)"$/);
+                if (match) html += `<a href="${match[1]}">${match[2]}</a>`;
+                i++; continue;
+            }
+
+            // STYLE
+            if (line.startsWith("STYLE {")) {
+                let j=i+1;
+                while (j<lines.length && lines[j].trim()!=="}") {
+                    const styleMatch = lines[j].trim().match(/^([A-Z0-9]+)\s*{\s*"(.*)"\s*}$/);
+                    if (styleMatch) styleHTML += `${styleMatch[1].toLowerCase()} { ${styleMatch[2]} }\n`;
+                    j++;
+                }
+                i=j+1; continue;
+            }
+
+            // FOR
+            if (line.startsWith("FOR ")) {
+                const match = line.match(/^FOR\s+([a-zA-Z_][a-zA-Z0-9_]*)=([0-9]+)\s+TO\s+([0-9]+)\s*{$/);
+                if (match) {
+                    const varName = match[1];
+                    const start = parseInt(match[2]);
+                    const end = parseInt(match[3]);
+                    const [blockContent, endIdx] = processBlock(lines, i+1);
+                    for (let v=start; v<=end; v++) {
+                        vars[varName]=v;
+                        html += blockContent;
+                    }
+                    i = endIdx+1; continue;
+                }
+            }
+
+            // IF ELSE
+            if (line.startsWith("IF ")) {
+                const condition = line.slice(3, line.indexOf("{")).trim();
+                const [trueBlock, endIdx] = processBlock(lines, i+1);
+                i = endIdx+1;
+                let falseBlock = "";
+                if (i<lines.length && lines[i].trim().startsWith("ELSE")) {
+                    const [fb, endIdx2] = processBlock(lines, i+1);
+                    falseBlock = fb;
+                    i = endIdx2+1;
+                }
+                if (evalExpr(condition)) html += trueBlock;
+                else html += falseBlock;
                 continue;
             }
-        }
 
-        // IF/ELSEブロック（簡易）
-        if (line.startsWith("IF ")) {
-            // 簡易版では評価はそのまま eval で処理
-            stack.push("IF");
-            continue;
-        }
+            // H1〜H6, DIV
+            const openTagMatch = line.match(/^([A-Z0-9]+)\s*{$/);
+            const singleLineMatch = line.match(/^([A-Z0-9]+)\s*{\s*"(.*)"\s*}$/);
+            if (openTagMatch) {
+                const tag = openTagMatch[1].toLowerCase();
+                const [innerHTML, endIdx] = processBlock(lines, i+1);
+                html += `<${tag}>${innerHTML}</${tag}>`;
+                i = endIdx+1; continue;
+            }
+            if (singleLineMatch) {
+                const tag = singleLineMatch[1];
+                let text = singleLineMatch[2];
+                const htmlTag = (tag==="PRINT")?"p":tag.toLowerCase();
+                if (text.includes("+")) {
+                    const parts = text.split("+").map(s=>s.trim().replace(/^"|"$/g,""));
+                    text = parts.map(p=>evalExpr(p)).join("");
+                } else {
+                    text = evalExpr(text.replace(/^"|"$/g,""));
+                }
+                html += `<${htmlTag}>${text}</${htmlTag}>`;
+                i++; continue;
+            }
 
-        // ネスト開始
-        const openTagMatch = line.match(/^([A-Z0-9]+)\s*{$/);
-        const closeTagMatch = line.match(/^}$/);
-        const singleLineMatch = line.match(/^([A-Z0-9]+)\s*{\s*"(.*)"\s*}$/);
-
-        if (openTagMatch) {
-            const tag = openTagMatch[1];
-            stack.push(tag);
-            html += `<${tag.toLowerCase()}>`;
-        } else if (closeTagMatch) {
-            const tag = stack.pop();
-            html += `</${tag.toLowerCase()}>`;
-        } else if (singleLineMatch) {
-            const tag = singleLineMatch[1];
-            let text = singleLineMatch[2];
-            const htmlTag = (tag === "PRINT") ? "p" : tag.toLowerCase();
-            // +で文字列連結
-            if (text.includes("+")) {
-                const parts = text.split("+").map(s=>s.trim().replace(/"/g,""));
-                text = parts.map(p=>evalExpression(p)).join("");
-            }
-            html += `<${htmlTag}>${text}</${htmlTag}>`;
-        } else if (line.startsWith("PRINT ")) {
-            let text = line.slice(6).replace(/"/g,"");
-            if (text.includes("+")) {
-                const parts = text.split("+").map(s=>s.trim().replace(/"/g,""));
-                text = parts.map(p=>evalExpression(p)).join("");
-            }
-            html += `<p>${text}</p>`;
-        } else if (line.startsWith("IMG ")) {
-            const match = line.match(/^IMG\s*"([^"]+)",\s*"([^"]+)"$/);
-            if (match) {
-                html += `<img src="${match[1]}" alt="${match[2]}">`;
-            }
-        } else if (line.startsWith("A ")) {
-            const match = line.match(/^A\s*"([^"]+)",\s*"([^"]+)"$/);
-            if (match) {
-                html += `<a href="${match[1]}">${match[2]}</a>`;
-            }
+            i++;
         }
+        return [html, i];
     }
 
-    if (styleHTML) {
-        html = `<style>\n${styleHTML}</style>\n` + html;
-    }
-
-    document.getElementById("output").innerHTML = html;
+    const [finalHTML,_] = processBlock(lines,0);
+    let resultHTML = finalHTML;
+    if (styleHTML) resultHTML = `<style>\n${styleHTML}</style>\n` + resultHTML;
+    document.getElementById("output").innerHTML = resultHTML;
 }
 </script>
 </body>
