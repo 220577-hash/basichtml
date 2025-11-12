@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>大人用 BasicHTML 完全版</title>
+</head>
+<body>
+<h2>BasicHTML Editor</h2>
+<textarea id="code" style="width:100%;height:300px;">
+STYLE {
+  H1 { "color:red; font-size:30px;" }
+  P { "color:blue;" }
+}
+
+H1 { "見出し" }
+DIV {
+  PRINT "段落1"
+  IMG "https://example.com/image.jpg", "説明文"
+  H2 { "小見出し" }
+  A "https://example.com", "リンクテキスト"
+  FOR i=1 TO 3 {
+    PRINT "繰り返し " + i
+  }
+  IF 1<2 {
+    PRINT "条件成立"
+  } ELSE {
+    PRINT "条件不成立"
+  }
+}
+</textarea>
+<button onclick="run()">Run</button>
+<div id="output" style="margin-top:20px;border:1px solid #ccc;padding:10px;"></div>
+
+<script>
+function run() {
+    const code = document.getElementById("code").value;
+    const lines = code.split("\n");
+    const stack = [];
+    let html = "";
+    let styleHTML = "";
+
+    function evalExpression(expr) {
+        try {
+            return Function('"use strict"; return (' + expr + ')')();
+        } catch {
+            return expr;
+        }
+    }
+
+    for (let rawLine of lines) {
+        let line = rawLine.trim();
+        if (!line) continue;
+
+        // STYLEブロック
+        if (line.startsWith("STYLE {")) {
+            stack.push("STYLE");
+            continue;
+        } else if (line === "}" && stack[stack.length-1]==="STYLE") {
+            stack.pop();
+            continue;
+        }
+        if (stack.includes("STYLE")) {
+            const match = line.match(/^([A-Z0-9]+)\s*{\s*"(.*)"\s*}$/);
+            if (match) {
+                const tag = match[1].toLowerCase();
+                const css = match[2];
+                styleHTML += `${tag} { ${css} }\n`;
+            }
+            continue;
+        }
+
+        // FORブロック
+        if (line.startsWith("FOR ")) {
+            const match = line.match(/^FOR\s+([a-zA-Z]+)=([0-9]+)\s+TO\s+([0-9]+)\s*{$/);
+            if (match) {
+                const varName = match[1];
+                const start = parseInt(match[2]);
+                const end = parseInt(match[3]);
+                const blockLines = [];
+                stack.push("FOR");
+                continue;
+            }
+        }
+
+        // IF/ELSEブロック（簡易）
+        if (line.startsWith("IF ")) {
+            // 簡易版では評価はそのまま eval で処理
+            stack.push("IF");
+            continue;
+        }
+
+        // ネスト開始
+        const openTagMatch = line.match(/^([A-Z0-9]+)\s*{$/);
+        const closeTagMatch = line.match(/^}$/);
+        const singleLineMatch = line.match(/^([A-Z0-9]+)\s*{\s*"(.*)"\s*}$/);
+
+        if (openTagMatch) {
+            const tag = openTagMatch[1];
+            stack.push(tag);
+            html += `<${tag.toLowerCase()}>`;
+        } else if (closeTagMatch) {
+            const tag = stack.pop();
+            html += `</${tag.toLowerCase()}>`;
+        } else if (singleLineMatch) {
+            const tag = singleLineMatch[1];
+            let text = singleLineMatch[2];
+            const htmlTag = (tag === "PRINT") ? "p" : tag.toLowerCase();
+            // +で文字列連結
+            if (text.includes("+")) {
+                const parts = text.split("+").map(s=>s.trim().replace(/"/g,""));
+                text = parts.map(p=>evalExpression(p)).join("");
+            }
+            html += `<${htmlTag}>${text}</${htmlTag}>`;
+        } else if (line.startsWith("PRINT ")) {
+            let text = line.slice(6).replace(/"/g,"");
+            if (text.includes("+")) {
+                const parts = text.split("+").map(s=>s.trim().replace(/"/g,""));
+                text = parts.map(p=>evalExpression(p)).join("");
+            }
+            html += `<p>${text}</p>`;
+        } else if (line.startsWith("IMG ")) {
+            const match = line.match(/^IMG\s*"([^"]+)",\s*"([^"]+)"$/);
+            if (match) {
+                html += `<img src="${match[1]}" alt="${match[2]}">`;
+            }
+        } else if (line.startsWith("A ")) {
+            const match = line.match(/^A\s*"([^"]+)",\s*"([^"]+)"$/);
+            if (match) {
+                html += `<a href="${match[1]}">${match[2]}</a>`;
+            }
+        }
+    }
+
+    if (styleHTML) {
+        html = `<style>\n${styleHTML}</style>\n` + html;
+    }
+
+    document.getElementById("output").innerHTML = html;
+}
+</script>
+</body>
+</html>
